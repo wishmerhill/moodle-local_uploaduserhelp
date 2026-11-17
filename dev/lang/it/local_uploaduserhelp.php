@@ -18,7 +18,7 @@
  * Italian strings.
  *
  * @package    local_uploaduserhelp
- * @copyright  2026 Albes
+ * @copyright  2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

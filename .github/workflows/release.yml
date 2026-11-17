@@ -1,0 +1,92 @@
+# Builds the ZIP that Moodle can install from "Site administration > Plugins > Install plugins"
+# and publishes it as a GitHub release, whenever a tag like v0.2 is pushed.
+#
+# The ZIP must contain a single folder named after the plugin (uploaduserhelp/), which is why the
+# "Source code (zip)" archive made by GitHub cannot be used. Files marked export-ignore in
+# .gitattributes are left out.
+#
+# A push to a branch named ci/... runs everything as a dry run: the ZIP is built from the branch
+# and the fetch of the latest annotated tag is tested, but no release is created.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+    branches: ['ci/**']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Choose what to build
+        id: target
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "dryrun=false" >> "$GITHUB_OUTPUT"
+          else
+            tag=$(git describe --tags --abbrev=0)
+            echo "::notice::Dry run on branch $GITHUB_REF_NAME: nothing is published, tag fetch tested with $tag"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "ref=HEAD" >> "$GITHUB_OUTPUT"
+            echo "dryrun=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # actions/checkout may turn an annotated tag into a lightweight one, losing the message used as release notes.
+      - name: Fetch the annotated tag
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+        run: |
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          if [ "$(git cat-file -t "$TAG")" != "tag" ]; then
+            echo "::error::$TAG is not an annotated tag: its message is needed for the release notes"
+            exit 1
+          fi
+          git tag -l -n3 "$TAG"
+
+      - name: Check that the tag matches version.php
+        id: version
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          DRYRUN: ${{ steps.target.outputs.dryrun }}
+        run: |
+          release=$(sed -n "s/^\$plugin->release *= *'\(.*\)';.*/\1/p" version.php)
+          echo "tag: $TAG, version.php release: $release"
+          if [ "$DRYRUN" = "false" ] && [ "v$release" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match \$plugin->release '$release' in version.php"
+            exit 1
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Build the ZIP
+        env:
+          REF: ${{ steps.target.outputs.ref }}
+        run: |
+          zip="local_uploaduserhelp-${{ steps.version.outputs.release }}.zip"
+          git archive --format=zip --prefix=uploaduserhelp/ -o "$zip" "$REF"
+          unzip -l "$zip"
+          unzip -l "$zip" | grep -q ' uploaduserhelp/version.php$'
+          unzip -l "$zip" | grep -q ' uploaduserhelp/lang/en/local_uploaduserhelp.php$'
+          if unzip -l "$zip" | grep -Eq ' uploaduserhelp/(\.git|\.github|dev/)'; then
+            echo "::error::The ZIP contains files that should have been excluded"
+            exit 1
+          fi
+          echo "ZIP=$zip" >> "$GITHUB_ENV"
+
+      - name: Create the GitHub release
+        if: steps.target.outputs.dryrun == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" \
+            --title "${{ steps.version.outputs.release }}" \
+            --notes-from-tag

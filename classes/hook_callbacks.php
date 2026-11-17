@@ -22,13 +22,12 @@ use core\hook\output\before_footer_html_generation;
  * Adds a help icon (and optionally a default value) to the username template field of "Upload users".
  *
  * @package    local_uploaduserhelp
- * @copyright  2026 Albes
+ * @copyright  2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class hook_callbacks {
-
     /** Page type of admin/tool/uploaduser/index.php. */
-    const PAGETYPE = 'admin-tool-uploaduser-index';
+    private const PAGETYPE = 'admin-tool-uploaduser-index';
 
     /**
      * Load the JS on the "Upload users" page only.

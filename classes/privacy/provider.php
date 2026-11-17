@@ -20,11 +20,10 @@ namespace local_uploaduserhelp\privacy;
  * Privacy provider: the plugin stores no personal data.
  *
  * @package    local_uploaduserhelp
- * @copyright  2026 Albes
+ * @copyright  2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {
-
     /**
      * Reason for not storing data.
      *

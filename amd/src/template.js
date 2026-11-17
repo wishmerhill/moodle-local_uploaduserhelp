@@ -17,7 +17,7 @@
  * Help icon and default value for the username template field of "Upload users".
  *
  * @module     local_uploaduserhelp/template
- * @copyright  2026 Albes
+ * @copyright  2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
